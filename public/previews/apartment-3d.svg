@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#172931"/><stop offset="1" stop-color="#29414b"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="36"/></filter></defs>
+<rect width="1600" height="900" fill="#0b1119"/><circle cx="1290" cy="120" r="290" fill="#80cce0" opacity=".17" filter="url(#b)"/>
+<g transform="translate(250 165) rotate(-8 540 300)"><rect x="0" y="0" width="1080" height="600" rx="32" fill="url(#g)" stroke="#ffffff" stroke-opacity=".12" stroke-width="3"/>
+<g fill="none" stroke="#eaf2f5" stroke-opacity=".5" stroke-width="8"><rect x="65" y="60" width="475" height="265" rx="10"/><rect x="565" y="60" width="450" height="265" rx="10"/><rect x="65" y="350" width="575" height="185" rx="10"/><rect x="665" y="350" width="350" height="185" rx="10"/></g>
+<g fill="#80cce0" opacity=".65"><rect x="105" y="105" width="190" height="80" rx="22"/><rect x="625" y="115" width="160" height="110" rx="18"/><rect x="105" y="390" width="280" height="55" rx="18"/></g></g>
+<text x="84" y="96" fill="#f4f7fb" font-family="Arial, sans-serif" font-size="34" font-weight="700">APARTMENT 3D</text><text x="86" y="138" fill="#91a0b5" font-family="Arial, sans-serif" font-size="18">SPATIAL PREVIEW · INTERACTIVE 3D</text></svg>

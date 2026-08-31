@@ -1,0 +1,46 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: #080c12;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(80, 118, 138, 0.12), transparent 30rem),
+    radial-gradient(circle at 100% 10%, rgba(79, 103, 176, 0.1), transparent 28rem),
+    #080c12;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  color: #071011;
+  background: #7ce7d5;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
