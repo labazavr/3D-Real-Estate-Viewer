@@ -16,7 +16,7 @@ export const RoomMesh = ({ room }: RoomMeshProps) => {
   const [x, , z] = room.layout.position;
   const [width, depth] = room.layout.size;
 
-  const stop = (event: ThreeEvent<PointerEvent>) => event.stopPropagation();
+  const stop = (event: ThreeEvent<MouseEvent>) => event.stopPropagation();
 
   return (
     <group position={[x, 0, z]}>
