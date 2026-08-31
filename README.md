@@ -9,6 +9,7 @@ The application allows users to explore apartments in an immersive 3D environmen
 ## ✨ Features
 
 ### 🏢 Property Catalog
+![Property Catalog](./screenshots/properties.png)
 
 - Browse available apartments
 - View property details
@@ -17,6 +18,7 @@ The application allows users to explore apartments in an immersive 3D environmen
 
 
 ### 🌐 Interactive 3D Viewer
+![3D Viewer](./screenshots/viewer.png)
 
 - Real-time WebGL rendering
 - Orbit camera controls
@@ -27,6 +29,7 @@ The application allows users to explore apartments in an immersive 3D environmen
 
 
 ### 🚪 Room Interaction
+![Mobile](./screenshots/mobile.png)
 
 - Select rooms directly in 3D
 - Hover effects
