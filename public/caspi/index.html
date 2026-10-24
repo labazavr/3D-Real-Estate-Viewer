@@ -1,0 +1,472 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Caspi Yards Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working console — 3D district fills the stage, a right-hand rail switches between Подбор / Квартира / AI, a cash-in timeline runs underneath. */
+:root{
+  --bg:#eef1f2; --panel:#ffffff; --ink:#132227; --muted:#5d6f75; --line:#d6dde0;
+  --sea:#0f6e7a; --sea-soft:#d8ecee; --sand:#c79a52;
+  --ok:#1f9d6b; --next:#d99a1e; --closed:#8a979c; --sold:#3c4a50; --hit:#e8503a;
+  --stage:#dfe6e8;
+  --f-display:"Unbounded","Manrope",system-ui,sans-serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1619; --panel:#142126; --ink:#e4ecee; --muted:#93a6ac; --line:#24363c;
+  --sea:#3fb3bf; --sea-soft:#163a40; --sand:#d8b06b;
+  --ok:#3cc28c; --next:#f0b23a; --closed:#6d7d83; --sold:#a9b8bd; --hit:#ff6b52; --stage:#0a1215; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1619; --panel:#142126; --ink:#e4ecee; --muted:#93a6ac; --line:#24363c;
+  --sea:#3fb3bf; --sea-soft:#163a40; --sand:#d8b06b;
+  --ok:#3cc28c; --next:#f0b23a; --closed:#6d7d83; --sold:#a9b8bd; --hit:#ff6b52; --stage:#0a1215; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:auto 1fr auto;height:100%;gap:10px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-family:var(--f-display);font-size:19px;font-weight:700;letter-spacing:.02em;margin:0}
+.brand span{color:var(--muted);font-size:12px}
+.kpis{display:flex;flex-wrap:wrap;gap:6px 18px;margin-left:auto}
+.kpi{display:flex;flex-direction:column;min-width:0}
+.kpi b{font-family:var(--f-mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:10px;min-height:0}
+.stage{position:relative;border-radius:var(--r);overflow:hidden;background:var(--stage);min-height:320px}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+.osm{position:absolute;left:10px;top:10px;font-size:10px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 7px;opacity:.85}.osm a{color:inherit}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 20px)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:12px;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.stage .tools{position:absolute;right:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--sea)}
+.btn.primary{background:var(--sea);border-color:var(--sea);color:#fff}
+.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.hover-tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
+.rail{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-height:0;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tab{flex:1;background:none;border:0;padding:11px 6px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--sea)}
+.pane{flex:1;overflow:auto;padding:14px;min-height:0}
+.pane[hidden],.ask[hidden]{display:none}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px;width:100%;min-width:0}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:5px 10px;cursor:pointer;font-weight:600;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--sea);border-color:var(--sea);color:#fff}
+.count{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 8px;font-size:13px;color:var(--muted)}
+.count b{color:var(--ink);font-family:var(--f-mono)}
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.row:hover{background:var(--sea-soft)}
+.row .dot{grid-row:span 2}
+.row .t{font-weight:700}
+.row .s{grid-column:2;color:var(--muted);font-size:12px}
+.row .p{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;grid-row:span 2}
+.row .p small{display:block;color:var(--muted);font-size:11px}
+.more{margin-top:10px;width:100%}
+.card h2{font-family:var(--f-display);font-size:17px;margin:0 0 2px;font-weight:600;text-wrap:balance}
+.card .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+.price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.price b{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums}
+.price span{color:var(--muted);font-family:var(--f-mono);font-size:13px}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px;margin:0}
+.dl dt{color:var(--muted)}
+.dl dd{margin:0;font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid currentColor}
+.plan{margin-top:14px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;position:relative}
+.plan svg{display:block;width:100%;height:auto}
+.plan .cap{position:absolute;left:8px;top:8px;background:rgba(255,255,255,.92);color:#132227;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600}
+.plan polygon{cursor:pointer;stroke-width:6;transition:fill-opacity .15s}
+.plan polygon:hover{fill-opacity:.55}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.floorbar{display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{padding:9px 12px;border-radius:10px;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.u{align-self:flex-end;background:var(--sea);color:#fff}
+.msg.a{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+.msg.a a{color:var(--sea);font-weight:700;cursor:pointer;text-decoration:underline}
+.msg.sys{align-self:center;font-size:12px;color:var(--muted);background:none;padding:0}
+.ask{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line)}
+.ask input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px}
+.sugg{display:flex;flex-wrap:wrap;gap:6px}
+.sugg button{border:1px dashed var(--line);background:none;border-radius:999px;padding:5px 11px;cursor:pointer;font-size:12px;text-align:left}
+.sugg button:hover{border-color:var(--sea)}
+.timeline{display:grid;grid-template-columns:auto 1fr auto;gap:6px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.timeline label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.timeline output{font-family:var(--f-mono);font-weight:600;font-size:15px;white-space:nowrap}
+#spark{grid-column:1/-1;width:100%;height:46px;display:block}
+input[type=range]{width:100%;accent-color:var(--sea)}
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{height:auto}
+  .main{grid-template-columns:1fr}
+  .stage{height:58vh;min-height:300px}
+  .rail{max-height:none}
+  .pane{max-height:none;overflow:visible}
+  .kpis{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand"><h1>CASPI YARDS</h1><span>симулятор продаж · 11 корпусов · 2 875 квартир</span></div>
+    <div class="kpis" id="kpis"></div>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="3D-модель квартала">
+      <canvas id="scene"></canvas>
+      <div class="loading" id="loading">Загружаю 3D-модель квартала…</div>
+      <div class="tools">
+        <button class="btn" id="viewAll">Весь квартал</button>
+        <button class="btn" id="ghost" aria-pressed="false">Прозрачные здания</button>
+        <button class="btn" id="colorMode">Цвет: статус</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="osm">Подложка: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · генплан FGR 26.09.2025</div>
+      <div class="hover-tip" id="tip" hidden></div>
+    </section>
+
+    <aside class="rail">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-tab="find" id="t-find">Подбор</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="unit" id="t-unit">Квартира</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="ai" id="t-ai">AI-консультант</button>
+      </div>
+
+      <div class="pane" id="p-find" role="tabpanel">
+        <div class="fgrid">
+          <div class="field" style="grid-column:1/-1"><label>Спальни</label>
+            <div class="seg" id="f-br"><button data-v="0" aria-pressed="false">Студия</button><button data-v="1" aria-pressed="false">1</button><button data-v="2" aria-pressed="false">2</button><button data-v="3" aria-pressed="false">3</button></div></div>
+          <div class="field"><label for="f-bud">Бюджет до, ₼</label><input id="f-bud" type="number" min="0" step="10000" placeholder="напр. 300000"></div>
+          <div class="field"><label for="f-amin">Площадь от, м²</label><input id="f-amin" type="number" min="0" step="1" placeholder="40"></div>
+          <div class="field"><label for="f-b">Корпус</label><select id="f-b"><option value="">Все</option></select></div>
+          <div class="field"><label for="f-view">Вид</label><select id="f-view"><option value="">Любой</option></select></div>
+          <div class="field"><label for="f-fmin">Этаж от</label><input id="f-fmin" type="number" min="1" max="44" placeholder="3"></div>
+          <div class="field"><label for="f-st">Статус на дату</label><select id="f-st"><option value="open">Только в продаже</option><option value="">Все</option><option value="next">Следующая волна</option><option value="closed">Закрыто</option><option value="sold">Продано по плану</option></select></div>
+          <div class="field" style="grid-column:1/-1"><label for="f-sort">Сортировка</label><select id="f-sort"><option value="tot">Цена, по возрастанию</option><option value="ppm">₼/м², по возрастанию</option><option value="-a">Площадь, по убыванию</option><option value="-f">Этаж, сверху</option></select></div>
+        </div>
+        <div class="count"><span>Найдено <b id="cnt">0</b></span><button class="btn" id="reset">Сбросить</button></div>
+        <div class="list" id="list"></div>
+        <button class="btn more" id="more" hidden>Показать ещё</button>
+      </div>
+
+      <div class="pane" id="p-unit" role="tabpanel" hidden>
+        <div class="empty" id="u-empty">Нажмите на окно в 3D, строку в подборе или спросите AI-консультанта.</div>
+        <div class="card" id="u-card" hidden></div>
+      </div>
+
+      <div class="pane" id="p-ai" role="tabpanel" hidden>
+        <div class="chat" id="chat">
+          <div class="msg a">Я подбираю квартиры по реестру Caspi Yards и подсвечиваю их на 3D-модели. Опишите покупателя: бюджет, состав семьи, вид, этаж, срок покупки.</div>
+          <div class="sugg" id="sugg">
+            <button>Двушка с видом на море до 400 000 ₼</button>
+            <button>Самые дешёвые студии в продаже сейчас</button>
+            <button>Инвестор, 250 тыс. ₼: что даст максимальный рост цены к сдаче?</button>
+            <button>Сравни башню и корпус 1 по цене за м²</button>
+          </div>
+        </div>
+      </div>
+      <form class="ask" id="ask" hidden>
+        <input id="q" autocomplete="off" placeholder="Например: 3 спальни, высокий этаж, вид на море">
+        <button class="btn primary" id="send" type="submit">Спросить</button>
+        <button class="btn" id="stop" type="button" hidden>Стоп</button>
+      </form>
+    </aside>
+  </div>
+
+  <section class="timeline" aria-label="Таймлайн продаж">
+    <label for="date">Дата сценария</label>
+    <input id="date" type="range" min="0" max="61" value="0" step="1">
+    <output id="dateOut">11.2026</output>
+    <canvas id="spark" aria-label="План поступлений по месяцам"></canvas>
+  </section>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="vendor/meshopt_decoder.js"></script>
+<script>
+(async()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=n=>Math.round(n).toLocaleString('ru-RU').replace(/,/g,' ');
+const fmtM=n=>(n/1e6).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн';
+const BR=['Студия','1 спальня','2 спальни','3 спальни'];
+const BRs=['Ст','1С','2С','3С'];
+
+// ---------- data ----------
+const [U0,PLANS,SITE,HBT]=await Promise.all(['units.json','plans.json','site.json','hbt.json'].map(f=>fetch(f).then(r=>r.json())));
+const C=U0.cols;const units=U0.rows.map(r=>{const o={};C.forEach((c,i)=>o[c]=r[i]);return o});
+const T0={y:2026,m:11};
+const mIdx=s=>{const [m,y]=s.split('.').map(Number);return (y-T0.y)*12+(m-T0.m)};
+const mLabel=i=>{const t=T0.m-1+i;return String(t%12+1).padStart(2,'0')+'.'+(T0.y+Math.floor(t/12))};
+const waveOrder={'Волна 1':1,'Волна 2':2,'Волна 3':3,'Волна 4':4,'Поздний выпуск':5};
+const waveStart={};
+for(const u of units){u.mi=mIdx(u.mon);u.wv=waveOrder[u.wave]||9;u.cur=u.a*u.ppm;u.fin=u.a*u.ppm2;
+  waveStart[u.wv]=Math.min(waveStart[u.wv]??999,u.mi)}
+const MAXM=Math.max(...units.map(u=>u.mi));$('#date').max=MAXM;
+let T=0;
+function status(u){if(u.mi<T)return'sold';if(waveStart[u.wv]<=T)return'open';const open=Object.keys(waveStart).filter(w=>waveStart[w]<=T).map(Number);const nx=Math.min(...Object.keys(waveStart).map(Number).filter(w=>waveStart[w]>T));return u.wv===nx?'next':'closed'}
+// price on date: linear from current price (11.2026) to planned price at release month
+function ppmAt(u,t=T){if(u.mi<=0)return u.ppm2;const k=Math.min(1,Math.max(0,t/u.mi));return u.ppm+(u.ppm2-u.ppm)*k}
+const priceAt=(u,t=T)=>u.a*ppmAt(u,t);
+const ST={open:['В продаже','--ok'],next:['Следующая волна','--next'],closed:['Закрыто (резерв)','--closed'],sold:['Продано по плану','--sold']};
+
+// buildings
+const BNAME={11:'Башня Nargile'};const bName=b=>BNAME[b]||('Корпус '+b);
+const twinOf=b=>b<=3?String(b):String(b+1);
+const bset=[...new Set(units.map(u=>u.b))].sort((a,b)=>a-b);
+for(const b of bset)$('#f-b').insertAdjacentHTML('beforeend',`<option value="${b}">${bName(b)}</option>`);
+for(const v of [...new Set(units.map(u=>u.view))])$('#f-view').insertAdjacentHTML('beforeend',`<option>${v}</option>`);
+
+// ---------- 3D ----------
+const canvas=$('#scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42,1,1,8000);
+camera.position.set(420,380,520);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.target.set(0,30,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=40;controls.maxDistance=2600;
+scene.add(new THREE.HemisphereLight(0xffffff,0x8a9a9e,.95));
+const sun=new THREE.DirectionalLight(0xffffff,.75);sun.position.set(-300,500,250);scene.add(sun);
+// ---------- base map: OpenStreetMap (ODbL), georeferenced to SITE.center; x = east, z = south ----------
+const BM=await fetch('base.json').then(r=>r.json()).catch(()=>null);
+const PL=BM?BM.plane:[-4.71,0.0176,-0.0202],SEA=BM?BM.sea:-28.5;
+const terr=(x,z)=>PL[0]+PL[1]*x+PL[2]*z; // planar fit of the buildings' own base levels; the bay is draped on the same plane
+const MAT={};const mat_=(k,c)=>MAT[k]=k==='bld'?new THREE.MeshLambertMaterial({color:c}):new THREE.MeshBasicMaterial({color:c});
+mat_('land',0xd9dfdc);mat_('sea',0x7fb1bd);mat_('green',0xb8cdb0);mat_('water',0x8fbcc6);mat_('site',0xeef0ec);mat_('road',0xffffff);mat_('major',0xf4efe4);mat_('rail',0x8a8f92);mat_('bld',0xc9ced0);
+function meshOf(pos,idx,m,ro){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();const o=new THREE.Mesh(g,m);o.renderOrder=ro||0;o.matrixAutoUpdate=false;scene.add(o);return o}
+function flat(rings,m,off,fixedY,ro){const pos=[],idx=[];for(const r of rings){if(r.length<3)continue;const v=r.map(p=>new THREE.Vector2(p[0],p[1]));if(THREE.ShapeUtils.isClockWise(v))v.reverse();
+  const t=THREE.ShapeUtils.triangulateShape(v,[]);const b=pos.length/3;for(const p of v)pos.push(p.x,fixedY!=null?fixedY:terr(p.x,p.y)+off,p.y);for(const f of t)idx.push(b+f[0],b+f[2],b+f[1])}
+  const o=meshOf(pos,idx,m,ro);m.polygonOffset=true;m.polygonOffsetFactor=-ro;m.polygonOffsetUnits=-ro;return o}
+function ribbons(list,m,off,wOf,ro){const pos=[],idx=[];for(const L of list){const w=wOf(L)/2,c=L.slice(L.length%2?1:0);const n=c.length/2;if(n<2)continue;const b=pos.length/3;
+  for(let i=0;i<n;i++){const x=c[2*i],z=c[2*i+1];const i0=Math.max(0,i-1),i1=Math.min(n-1,i+1);let dx=c[2*i1]-c[2*i0],dz=c[2*i1+1]-c[2*i0+1];const l=Math.hypot(dx,dz)||1;const nx=-dz/l*w,nz=dx/l*w;
+    pos.push(x+nx,terr(x+nx,z+nz)+off,z+nz,x-nx,terr(x-nx,z-nz)+off,z-nz)}
+  for(let i=0;i<n-1;i++){const a=b+2*i;idx.push(a,a+2,a+1,a+1,a+2,a+3)}}
+  m.polygonOffset=true;m.polygonOffsetFactor=-ro;m.polygonOffsetUnits=-ro;return meshOf(pos,idx,m,ro)}
+// ground: tilted to the elevations of the buildings themselves (plane fit, residual <0.3 m)
+const R0=BM?BM.rad:1500;const gg=new THREE.PlaneGeometry(2*R0,2*R0,80,80);gg.rotateX(-Math.PI/2);
+{const p=gg.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,terr(p.getX(i),p.getZ(i))-0.05);gg.computeVertexNormals()}
+const ground=new THREE.Mesh(gg,MAT.land);scene.add(ground);
+const sea=BM&&BM.seaPoly.length?flat(BM.seaPoly,MAT.sea,0.06,null,1):new THREE.Object3D();
+if(BM){flat(BM.green,MAT.green,0.08,null,2);flat(BM.water,MAT.water,0.1,null,2);flat(BM.site,MAT.site,0.12,null,3);
+  ribbons(BM.roads.filter(r=>r[0]<9),MAT.road,0.16,r=>r[0],4);ribbons(BM.roads.filter(r=>r[0]>=9),MAT.major,0.2,r=>r[0],5);ribbons(BM.rail,MAT.rail,0.24,()=>3.2,6);
+  // surrounding buildings: one merged mesh, walls + roofs
+  const pos=[],idx=[];for(const B of BM.blds){const h=B[0],c=B.slice(1),n=c.length/2;if(n<3)continue;let v=[];for(let i=0;i<n;i++)v.push(new THREE.Vector2(c[2*i],c[2*i+1]));if(THREE.ShapeUtils.isClockWise(v))v.reverse();
+    let cx=0,cz=0;v.forEach(p=>{cx+=p.x;cz+=p.y});const y0=terr(cx/n,cz/n)-1.5,y1=y0+1.5+h;
+    const t=THREE.ShapeUtils.triangulateShape(v,[]);let b=pos.length/3;v.forEach(p=>pos.push(p.x,y1,p.y));t.forEach(f=>idx.push(b+f[0],b+f[2],b+f[1]));
+    for(let i=0;i<n;i++){const p=v[i],q=v[(i+1)%n];b=pos.length/3;pos.push(p.x,y0,p.y,q.x,y0,q.y,q.x,y1,q.y,p.x,y1,p.y);idx.push(b,b+2,b+1,b,b+3,b+2)}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);const gn=g.toNonIndexed();gn.computeVertexNormals();scene.add(new THREE.Mesh(gn,MAT.bld))}
+function themeScene(){const dark=matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light'||document.documentElement.dataset.theme==='dark';
+  scene.background=new THREE.Color(dark?0x0a1215:0xdfe6e8);scene.fog=new THREE.Fog(scene.background,1300,3400);
+  const C=dark?{land:0x182428,sea:0x143a45,green:0x1f3a2a,water:0x1d4650,site:0x2b393d,road:0x33444a,major:0x4a5a5e,rail:0x6b777c,bld:0x2a383d}:{land:0xc9d1cd,sea:0x6fa3b2,green:0xa6c19b,water:0x86b6c2,site:0xe4e7e2,road:0xf3f3f0,major:0xe8dcc0,rail:0x6f777b,bld:0x9ea7ab};
+  for(const k in C)MAT[k].color.set(C[k])}
+themeScene();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{themeScene();recolor()});
+new MutationObserver(()=>{themeScene();recolor()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+for(const p of SITE.podiums){const m=new THREE.Mesh(new THREE.BoxGeometry(p.L,p.h,p.W),new THREE.MeshLambertMaterial({color:0xb9c3c2}));m.position.set(p.x,p.y+p.h/2,p.z);m.rotation.y=p.rotY;scene.add(m)}
+const loader=new THREE.GLTFLoader();if(window.MeshoptDecoder)loader.setMeshoptDecoder(MeshoptDecoder);const bldMeshes=[];const bldObj={};
+const ghostMat=[];
+const MODELS=await fetch('models.json').then(r=>r.json());
+const b64=s=>{const bin=atob(s),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a.buffer};
+await Promise.all(SITE.buildings.map(b=>new Promise(res=>{if(!MODELS[b.model])return res();loader.parse(b64(MODELS[b.model]),'',g=>{
+  const o=g.scene;o.position.set(b.x,b.y,b.z);o.rotation.y=b.rotY;
+  o.traverse(m=>{if(m.isMesh){m.material=m.material.clone();m.material.transparent=true;ghostMat.push(m.material);m.userData.twin=b.id;bldMeshes.push(m)}});
+  bldObj[b.id]=o;scene.add(o);res()},()=>res())})));
+$('#loading').hidden=true;
+
+// window markers
+const N=units.length;
+const geo=new THREE.BoxGeometry(2.6,2.2,2.6);
+const mat=new THREE.MeshBasicMaterial();
+const inst=new THREE.InstancedMesh(geo,mat,N);
+const dummy=new THREE.Object3D();const pos=[];
+units.forEach((u,i)=>{const w=u.w||[0,0,-999];pos[i]=new THREE.Vector3(w[0],w[2],w[1]);dummy.position.copy(pos[i]);dummy.scale.setScalar(1);dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix)});
+inst.setColorAt(0,new THREE.Color(1,1,1));scene.add(inst);
+const selRing=new THREE.Mesh(new THREE.SphereGeometry(4.2,20,14),new THREE.MeshBasicMaterial({color:0xe8503a,transparent:true,opacity:.85}));selRing.visible=false;scene.add(selRing);
+
+const HS={ok:['Совпадает с HBT','#3aa76d'],area:['Изменилась площадь','#e0a526'],count:['Изменилась нарезка','#e8503a'],gone:['Нет в HBT','#6b6f76']};
+const hbtOf=u=>(HBT.floors[u.b+'-'+u.f]||['gone'])[0];
+const MODES=['status','price','hbt'],MLBL={status:'статус',price:'цена ₼/м²',hbt:'сверка HBT'};
+let colorMode='status';let matchSet=null;let selected=null;
+const col=new THREE.Color();
+function priceColor(v,lo,hi){const k=Math.max(0,Math.min(1,(v-lo)/(hi-lo)));return col.setHSL(.52-.5*k,.65,.48)}
+const ppmLo=Math.min(...units.map(u=>u.ppm)),ppmHi=Math.max(...units.map(u=>u.ppm2));
+function recolor(){
+  const sc={};for(const k in ST)sc[k]=new THREE.Color(css(ST[k][1]));const dim=new THREE.Color(css('--closed'));
+  units.forEach((u,i)=>{
+    const hit=!matchSet||matchSet.has(i);
+    if(colorMode==='status')col.copy(sc[status(u)]);else if(colorMode==='hbt')col.set(HS[hbtOf(u)][1]);else priceColor(ppmAt(u),ppmLo,ppmHi);
+    if(!hit)col.lerp(dim,.85);
+    inst.setColorAt(i,col);
+    dummy.position.copy(pos[i]);dummy.scale.setScalar(hit&&matchSet?1.25:hit?1:.6);dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix)});
+  inst.instanceColor.needsUpdate=true;inst.instanceMatrix.needsUpdate=true;legend()}
+function legend(){
+  if(colorMode==='hbt'){$('#legend').innerHTML=Object.entries(HS).map(([k,[l,c]])=>`<span class="chip"><span class="dot" style="background:${c}"></span>${l} · ${units.filter(u=>hbtOf(u)===k).length}</span>`).join('')+`<span class="chip">HBT ${HBT.date}</span>`;return}
+  if(colorMode==='status')$('#legend').innerHTML=Object.entries(ST).map(([k,[l,c]])=>`<span class="chip"><span class="dot" style="background:var(${c})"></span>${l} · ${units.filter(u=>status(u)===k).length}</span>`).join('');
+  else $('#legend').innerHTML=`<span class="chip"><span class="dot" style="background:hsl(187,65%,48%)"></span>${fmt(ppmLo)} ₼/м²</span><span class="chip"><span class="dot" style="background:hsl(7,65%,48%)"></span>${fmt(ppmHi)} ₼/м²</span><span class="chip">цена на ${mLabel(T)}</span>`}
+
+function resize(){const r=canvas.parentElement.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(canvas.parentElement);resize();
+let fly=null;
+function flyTo(target,dist=160){const dir=camera.position.clone().sub(controls.target).normalize();fly={t0:performance.now(),fromT:controls.target.clone(),toT:target.clone(),fromP:camera.position.clone(),toP:target.clone().add(dir.multiplyScalar(dist))}}
+(function loop(t){requestAnimationFrame(loop);if(fly){const k=Math.min(1,(t-fly.t0)/700),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;controls.target.lerpVectors(fly.fromT,fly.toT,e);camera.position.lerpVectors(fly.fromP,fly.toP,e);if(k>=1)fly=null}
+  if(selRing.visible){const s=1+.25*Math.sin(t/180);selRing.scale.setScalar(s)}controls.update();renderer.render(scene,camera)})();
+
+// picking
+const ray=new THREE.Raycaster();const mouse=new THREE.Vector2();
+function pick(ev){const r=canvas.getBoundingClientRect();mouse.set((ev.clientX-r.left)/r.width*2-1,-(ev.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
+  const hu=ray.intersectObject(inst)[0];const hb=ray.intersectObjects(bldMeshes)[0];
+  if(hu&&(!hb||hu.distance<hb.distance+3))return{unit:hu.instanceId};if(hb)return{twin:hb.object.userData.twin};return null}
+let down=null;
+canvas.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+canvas.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>5)return;const p=pick(e);if(!p)return;
+  if(p.unit!=null)select(p.unit,true);else{const b=bset.find(b=>twinOf(b)===p.twin);if(b){$('#f-b').value=b;applyFilters();focusBuilding(b)}}});
+canvas.addEventListener('pointermove',e=>{if(e.buttons)return;const p=pick(e);const tip=$('#tip');
+  if(p&&p.unit!=null){const u=units[p.unit];const r=canvas.getBoundingClientRect();tip.hidden=false;tip.style.left=Math.min(e.clientX-r.left+14,r.width-200)+'px';tip.style.top=(e.clientY-r.top+14)+'px';
+    tip.innerHTML=`<b>${u.id}</b> · ${BR[u.br]} · ${u.a} м²<br>${fmt(priceAt(u))} ₼ · ${ST[status(u)][0]}`;canvas.style.cursor='pointer'}
+  else{tip.hidden=true;canvas.style.cursor=p?'pointer':'grab'}});
+canvas.addEventListener('pointerleave',()=>$('#tip').hidden=true);
+function focusBuilding(b){const o=bldObj[twinOf(b)];if(!o)return;const box=new THREE.Box3().setFromObject(o);const c=box.getCenter(new THREE.Vector3());flyTo(c,Math.max(140,box.getSize(new THREE.Vector3()).length()*1.1))}
+$('#viewAll').onclick=()=>{fly={t0:performance.now(),fromT:controls.target.clone(),toT:new THREE.Vector3(0,30,0),fromP:camera.position.clone(),toP:new THREE.Vector3(420,380,520)}};
+let ghost=false;$('#ghost').onclick=e=>{ghost=!ghost;e.target.setAttribute('aria-pressed',ghost);ghostMat.forEach(m=>{m.opacity=ghost?.18:1;m.depthWrite=!ghost})};
+$('#colorMode').onclick=e=>{colorMode=MODES[(MODES.indexOf(colorMode)+1)%MODES.length];e.target.textContent='Цвет: '+MLBL[colorMode];recolor()};
+
+// ---------- tabs ----------
+function tab(name){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===name));
+  ['find','unit','ai'].forEach(n=>$('#p-'+n).hidden=n!==name);$('#ask').hidden=name!=='ai';if(name==='ai')$('#chat').lastElementChild?.scrollIntoView({block:'end'})}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>tab(t.dataset.tab));
+
+// ---------- filters ----------
+const F={br:new Set()};
+document.querySelectorAll('#f-br button').forEach(b=>b.onclick=()=>{const v=+b.dataset.v;F.br.has(v)?F.br.delete(v):F.br.add(v);b.setAttribute('aria-pressed',F.br.has(v));applyFilters()});
+['#f-bud','#f-amin','#f-b','#f-view','#f-fmin','#f-st','#f-sort'].forEach(s=>$(s).addEventListener('input',()=>applyFilters()));
+$('#reset').onclick=()=>{F.br.clear();document.querySelectorAll('#f-br button').forEach(b=>b.setAttribute('aria-pressed','false'));['#f-bud','#f-amin','#f-b','#f-view','#f-fmin'].forEach(s=>$(s).value='');$('#f-st').value='open';applyFilters()};
+function query(q){
+  let r=units.map((u,i)=>i).filter(i=>{const u=units[i];
+    if(q.br&&q.br.length&&!q.br.includes(u.br))return false;
+    if(q.maxBudget&&priceAt(u)>q.maxBudget)return false;
+    if(q.minArea&&u.a<q.minArea)return false;if(q.maxArea&&u.a>q.maxArea)return false;
+    if(q.building&&u.b!==+q.building)return false;
+    if(q.views&&q.views.length&&!q.views.some(v=>u.view.toLowerCase().includes(String(v).toLowerCase())))return false;
+    if(q.minFloor&&u.f<q.minFloor)return false;if(q.maxFloor&&u.f>q.maxFloor)return false;
+    if(q.segment&&u.seg!==q.segment)return false;
+    if(q.status&&status(u)!==q.status)return false;return true});
+  const key={tot:i=>priceAt(units[i]),ppm:i=>ppmAt(units[i]),'-a':i=>-units[i].a,'-f':i=>-units[i].f,growth:i=>-(units[i].ppm2/ppmAt(units[i]))}[q.sort||'tot'];
+  return r.sort((a,b)=>key(a)-key(b))}
+let shown=40,result=[];
+function applyFilters(keepShown){
+  result=query({br:[...F.br],maxBudget:+$('#f-bud').value||0,minArea:+$('#f-amin').value||0,building:$('#f-b').value,views:$('#f-view').value?[$('#f-view').value]:[],minFloor:+$('#f-fmin').value||0,status:$('#f-st').value,sort:$('#f-sort').value});
+  if(!keepShown)shown=40;matchSet=new Set(result);renderList();recolor()}
+function renderList(){$('#cnt').textContent=fmt(result.length);
+  $('#list').innerHTML=result.slice(0,shown).map(i=>{const u=units[i],s=status(u);return`<button class="row" data-i="${i}"><span class="dot" style="background:var(${ST[s][1]})"></span><span class="t">${bName(u.b)} · эт. ${u.f} · ${BRs[u.br]} · ${u.a} м²</span><span class="p">${fmt(priceAt(u))} ₼<small>${fmt(ppmAt(u))} ₼/м²</small></span><span class="s">${u.view} · ${u.seg} · ${u.wave}</span></button>`}).join('')||'<div class="empty">Нет квартир под эти условия. Уберите один фильтр или сдвиньте дату.</div>';
+  $('#more').hidden=result.length<=shown;
+  $('#list').querySelectorAll('.row').forEach(r=>r.onclick=()=>select(+r.dataset.i,true))}
+$('#more').onclick=()=>{shown+=40;renderList()};
+
+// ---------- unit card ----------
+function select(i,fly_){selected=i;const u=units[i];selRing.position.copy(pos[i]);selRing.visible=!!u.w;if(fly_&&u.w)flyTo(pos[i],230);renderCard();tab('unit')}
+function renderCard(){if(selected==null)return;const u=units[selected],s=status(u);$('#u-empty').hidden=true;const c=$('#u-card');c.hidden=false;
+  const growth=(u.ppm2/ppmAt(u)-1)*100;
+  c.innerHTML=`<h2>${bName(u.b)}, этаж ${u.f}, ${BR[u.br].toLowerCase()}</h2>
+  <div class="sub">${u.id} · ${u.seg} · ${u.view}</div>
+  <span class="badge" style="color:var(${ST[s][1]})">${ST[s][0]}</span>
+  <div class="price"><b>${fmt(priceAt(u))} ₼</b><span>${fmt(ppmAt(u))} ₼/м² на ${mLabel(T)}</span></div>
+  <dl class="dl">
+    <dt>Площадь</dt><dd>${u.a} м²${u.bal?` · балкон ${u.bal} м²`:''}</dd>
+    <dt>Волна выпуска</dt><dd>${u.wave} · плановая продажа ${u.mon}</dd>
+    <dt>Цена в месяц продажи</dt><dd>${fmt(u.fin)} ₼ (${fmt(u.ppm2)} ₼/м²)</dd>
+    <dt>Потенциал роста</dt><dd>${growth>0?'+':''}${growth.toFixed(1)}% до месяца продажи</dd>
+    <dt>Стартовая цена</dt><dd>${fmt(u.cur)} ₼ (${fmt(u.ppm)} ₼/м², 11.2026)</dd>
+  </dl>
+  ${planSvg(u)}
+  <div class="floorbar"><button class="btn" id="fdn">Этаж ↓</button><button class="btn" id="fup">Этаж ↑</button><button class="btn" id="similar">Похожие</button><button class="btn" id="askAi">Спросить AI</button></div>`;
+  c.querySelectorAll('polygon[data-i]').forEach(p=>p.onclick=()=>select(+p.dataset.i,false));
+  const step=d=>{const t=units.findIndex(x=>x.b===u.b&&x.f===u.f+d&&x.p===u.p);if(t>=0)select(t,true)};
+  $('#fdn').onclick=()=>step(-1);$('#fup').onclick=()=>step(1);
+  $('#similar').onclick=()=>{F.br=new Set([u.br]);document.querySelectorAll('#f-br button').forEach(b=>b.setAttribute('aria-pressed',F.br.has(+b.dataset.v)));$('#f-amin').value=Math.floor(u.a*.9);$('#f-b').value='';$('#f-view').value='';$('#f-bud').value=Math.ceil(priceAt(u)*1.1/1000)*1000;applyFilters();tab('find')};
+  $('#askAi').onclick=()=>{tab('ai');$('#q').value=`Оцени квартиру ${u.id}: стоит ли брать сейчас и какие альтернативы дешевле?`;$('#q').focus()}}
+function planSvg(u){
+  if(!u.plan)return`<div class="note">Для этого этажа нет подтверждённой планировки в исходных PDF${u.b===11?' (башня: актуальный лист REV03 без диапазона этажей)':''}. Площадь и цена — из реестра.</div>`;
+  const P=PLANS[u.plan];const floor=units.map((x,i)=>i).filter(i=>units[i].b===u.b&&units[i].f===u.f&&units[i].plan===u.plan);
+  const polys=floor.map(i=>{const x=units[i],pp=P.pos[x.pi];if(!pp)return'';const c=i===selected?css('--hit'):css(ST[status(x)][1]);
+    return`<polygon data-i="${i}" points="${pp.pts.map(p=>p.join(',')).join(' ')}" fill="${c}" fill-opacity="${i===selected?.5:.22}" stroke="${c}"><title>${x.id} · ${x.a} м² · ${fmt(priceAt(x))} ₼</title></polygon>`}).join('');
+  return`<div class="plan"><span class="cap">План ${u.plan}${u.pc==='inferred'?' · подобран по составу этажа':u.pc==='reference'?' · справочный лист':''}</span><svg viewBox="0 0 ${P.w} ${P.h}" role="img" aria-label="Планировка этажа"><image href="plan_${u.plan}.webp" width="${P.w}" height="${P.h}"/>${polys}</svg></div>
+  <div class="note">Нажмите на соседнюю квартиру на плане. Площадь на чертеже: ${P.pos[u.pi].area} м² общая, ${P.pos[u.pi].net} м² внутренняя.</div>`}
+
+// ---------- timeline + KPIs ----------
+const byMonth=new Array(MAXM+1).fill(0);for(const u of units)if(u.mi>=0)byMonth[u.mi]+=u.fin;
+function kpis(){let sold=0,soldN=0,open=0,openV=0;for(const u of units){const s=status(u);if(s==='sold'){sold+=u.fin;soldN++}else if(s==='open'){open++;openV+=priceAt(u)}}
+  const tot=units.reduce((a,u)=>a+u.fin,0);const win=byMonth.slice(Math.max(0,T-5),T+1);const pace=units.filter(u=>u.mi>=T-5&&u.mi<=T).length/win.length;
+  $('#kpis').innerHTML=[[fmtM(sold)+' ₼','Cash-in по плану'],[(sold/tot*100).toFixed(0)+'%','Выручки собрано'],[fmt(soldN),'Продано, кв.'],[fmt(open),'В экспозиции'],[pace.toFixed(0)+'/мес','Темп, 6 мес'],[fmtM(openV)+' ₼','Стоимость экспозиции']]
+   .map(([v,l])=>`<div class="kpi"><b>${v}</b><small>${l}</small></div>`).join('')}
+function spark(){const c=$('#spark'),r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio,2);c.width=r.width*d;c.height=r.height*d;const x=c.getContext('2d');x.scale(d,d);
+  const w=r.width,h=r.height,mx=Math.max(...byMonth),bw=w/byMonth.length;
+  byMonth.forEach((v,i)=>{x.fillStyle=i<T?css('--sold'):i===T?css('--hit'):css('--sea');x.globalAlpha=i<=T?.9:.35;const bh=Math.max(1,v/mx*(h-12));x.fillRect(i*bw+1,h-bh,Math.max(1,bw-2),bh)});
+  x.globalAlpha=1;x.fillStyle=css('--muted');x.font='10px '+css('--f-mono');x.fillText('пик '+fmtM(mx)+' ₼/мес',4,10)}
+new ResizeObserver(spark).observe($('#spark'));
+$('#date').addEventListener('input',e=>{T=+e.target.value;$('#dateOut').textContent=mLabel(T);kpis();spark();applyFilters(true);renderCard()});
+
+// ---------- AI ----------
+const sample=await (window.claude?.use?.('sample')??Promise.resolve(null)).catch(()=>null);
+const chatEl=$('#chat');let turns=[];let ctl=null;
+const add=(cls,html)=>{const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;chatEl.append(d);d.scrollIntoView({block:'end'});return d};
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const linkify=t=>esc(t).replace(/CY-\d{2}-\d{2}-\d{2}/g,m=>`<a data-id="${m}">${m}</a>`);
+chatEl.addEventListener('click',e=>{const a=e.target.closest('a[data-id]');if(a){const i=units.findIndex(u=>u.id===a.dataset.id);if(i>=0)select(i,true)}});
+const short=i=>{const u=units[i];return{id:u.id,building:bName(u.b),floor:u.f,bedrooms:u.br,area:u.a,balcony:u.bal,view:u.view,segment:u.seg,status:ST[status(u)][0],price_now:Math.round(priceAt(u)),ppm_now:Math.round(ppmAt(u)),release_wave:u.wave,planned_sale_month:u.mon,price_at_sale:Math.round(u.fin),growth_pct:+((u.ppm2/ppmAt(u)-1)*100).toFixed(1),floorplan:u.plan?'есть':'нет'}};
+function stats(){const g={};for(const u of units){const k=bName(u.b);g[k]=g[k]||{units:0,open:0,min_price:1e12,ppm_sum:0,area_sum:0,views:{}};const o=g[k];o.units++;if(status(u)==='open')o.open++;o.min_price=Math.min(o.min_price,priceAt(u));o.ppm_sum+=priceAt(u);o.area_sum+=u.a;o.views[u.view]=(o.views[u.view]||0)+1}
+  return{date:mLabel(T),buildings:Object.fromEntries(Object.entries(g).map(([k,o])=>[k,{units:o.units,on_sale:o.open,min_price:Math.round(o.min_price),avg_ppm:Math.round(o.ppm_sum/o.area_sum),floors:Math.max(...units.filter(u=>bName(u.b)===k).map(u=>u.f)),views:o.views}]))}}
+const tools=[
+ {name:'search_units',description:'Ищет квартиры в реестре на текущую дату сценария, подсвечивает их на 3D и в списке. Возвращает total и до 8 лучших вариантов по сортировке.',
+  inputSchema:{type:'object',properties:{bedrooms:{type:'array',items:{type:'integer'},description:'0=студия,1,2,3'},maxBudget:{type:'number',description:'₼ по цене на дату'},minArea:{type:'number'},maxArea:{type:'number'},building:{type:'integer',description:'1-10 корпуса, 11 = башня Nargile'},views:{type:'array',items:{type:'string'},description:'подстроки: Море, Панорама моря, Панорама города, Парк, Бухта, Зыху, Соседняя'},minFloor:{type:'integer'},maxFloor:{type:'integer'},segment:{type:'string',enum:['Бизнес','Бизнес-плюс','Премиум']},status:{type:'string',enum:['open','next','closed','sold'],description:'open = в продаже на дату (по умолчанию)'},sort:{type:'string',enum:['tot','ppm','-a','-f','growth'],description:'tot цена↑, ppm ₼/м²↑, -a площадь↓, -f этаж↓, growth рост до продажи↓'}}},
+  execute(q){const r=query({br:q.bedrooms,maxBudget:+q.maxBudget||0,minArea:+q.minArea||0,maxArea:+q.maxArea||0,building:q.building,views:q.views,minFloor:+q.minFloor||0,maxFloor:+q.maxFloor||0,segment:q.segment,status:q.status??'open',sort:q.sort});
+    result=r;shown=40;matchSet=new Set(r);renderList();recolor();if(r[0]!=null){selected=r[0];selRing.position.copy(pos[r[0]]);selRing.visible=true;flyTo(pos[r[0]],260)}
+    return{total:r.length,top:r.slice(0,8).map(short)}}},
+ {name:'get_unit',description:'Полная карточка квартиры по ID (CY-ББ-ЭЭ-ПП) и выбор её на 3D.',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},
+  execute({id}){const i=units.findIndex(u=>u.id===String(id).trim());if(i<0)throw new Error('нет такой квартиры');select(i,true);tab('ai');return short(i)}},
+ {name:'project_stats',description:'Сводка по корпусам на дату: квартир, в продаже, мин. цена, средняя ₼/м², этажность, виды.',execute:()=>stats()}];
+const RULES=`Ты — AI-консультант отдела продаж жилого квартала Caspi Yards (Баку, Хатаи, проспект 8 Ноября; девелопер Avant Group). Отвечай по-русски, коротко и по делу, как сильный брокер: 2–5 предложений плюс список вариантов.
+Правила:
+- Любые цифры бери ТОЛЬКО из инструментов. Ничего не выдумывай: ни квартир, ни цен, ни скидок, ни рассрочек, ни сроков сдачи.
+- Для подбора всегда вызывай search_units; для конкретной квартиры — get_unit; для сравнения корпусов — project_stats.
+- Упоминай квартиры их ID в формате CY-01-03-01 — они становятся ссылками на 3D.
+- Цены в ₼ (AZN), формат «312 400 ₼». Статус «в продаже» = открыта волна выпуска на дату сценария, это план, а не подтверждённый свободный остаток.
+- Если вариантов нет — скажи, какой параметр ослабить и сколько вариантов это даст.
+- Для инвестора аргументируй ростом цены до плановой даты продажи (growth_pct) и ликвидностью формата.`;
+async function ask(text){
+  if(!text.trim())return;$('#sugg')?.remove();add('u',esc(text));turns.push({role:'user',content:`[Дата сценария: ${mLabel(T)}] ${text}`});
+  if(!sample){add('sys','AI недоступен в этом просмотре. Подбор работает во вкладке «Подбор».');return}
+  const out=add('a','Думаю…');ctl=new AbortController();$('#send').disabled=true;$('#stop').hidden=false;
+  try{const r=await sample([{role:'user',content:RULES},...turns.slice(-10)],{modelTier:'quick',signal:ctl.signal,tools,onText:({text})=>out.innerHTML=linkify(text)});
+    out.innerHTML=linkify(r.text);turns.push({role:'assistant',content:r.text})}
+  catch(e){if(e.text)out.innerHTML=linkify(e.text);else out.remove();turns.pop();
+    const m={not_granted:'Доступ к Claude не разрешён для этой страницы.',sampling_disabled:'Claude недоступен для этого аккаунта.',rate_limited:'Слишком много запросов. Подождите минуту.',tools_unavailable:'Этот просмотр не поддерживает инструменты AI.',cancelled:''}[e.code]??'Ответ прервался. Попробуйте ещё раз.';
+    if(m)add('sys',m)}
+  finally{$('#send').disabled=false;$('#stop').hidden=true}}
+$('#ask').addEventListener('submit',e=>{e.preventDefault();const v=$('#q').value;$('#q').value='';ask(v)});
+$('#stop').onclick=()=>ctl?.abort();
+$('#sugg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)ask(b.textContent)});
+
+// ---------- boot ----------
+kpis();spark();applyFilters();
+})().catch(e=>{console.error(e);const l=document.getElementById('loading');if(l){l.hidden=false;l.textContent='Не удалось загрузить данные. Обновите страницу.'}});
+</script>
+
+</body></html>
