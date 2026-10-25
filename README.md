@@ -95,11 +95,11 @@ The project follows Feature-Sliced Design principles.
 
 ## Caspi Yards — симулятор продаж (`/caspi/`)
 
-Статическая страница `public/caspi/index.html`: 3D-квартал (11 корпусов, 2 875 квартир прайса REV19),
+Статическая страница `public/caspi/index.html`: 3D-квартал (11 корпусов; площади по HBT 22.10 — 2 538 лотов, башня эт. 3–23 — 265 лотов REV19 «предварительно, без брони»),
 подбор, карточка квартиры, окраска «статус / цена ₼/м² / сверка HBT». three.js 0.147 лежит в
 `public/caspi/vendor/`, внешних запросов к CDN нет (кроме Google Fonts).
 
-- `units.json` — квартиры прайса REV19; `plans.json` — планы этажей с контурами; `models.json` — GLB корпусов (base64).
+- `units.json` — лоты: `src=hbt` (площадь HBT, цена ₼/м² REV19; `from` — объединённые лоты REV19), `src=pre` (башня 3–23, не в продаже); `plans.json` — планы этажей с контурами; `models.json` — GLB корпусов (base64).
 - `hbt.json` — поэтажная сверка с квартирографией архитектора `FGR_CPY_HBT_221026.xlsx` (Bina 1/3 в HBT = корпуса 3/1 прайса).
 - `renders/` — 23 экстерьерных рендера (webp, 1920 px).
 

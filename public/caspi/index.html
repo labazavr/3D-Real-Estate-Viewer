@@ -8,7 +8,7 @@
 :root{
   --bg:#eef1f2; --panel:#ffffff; --ink:#132227; --muted:#5d6f75; --line:#d6dde0;
   --sea:#0f6e7a; --sea-soft:#d8ecee; --sand:#c79a52;
-  --ok:#1f9d6b; --next:#d99a1e; --closed:#8a979c; --sold:#3c4a50; --hit:#e8503a;
+  --ok:#1f9d6b; --next:#d99a1e; --closed:#8a979c;--pre:#9a6fc4; --sold:#3c4a50; --hit:#e8503a;
   --stage:#dfe6e8;
   --f-display:"Unbounded","Manrope",system-ui,sans-serif;
   --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -18,11 +18,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0d1619; --panel:#142126; --ink:#e4ecee; --muted:#93a6ac; --line:#24363c;
   --sea:#3fb3bf; --sea-soft:#163a40; --sand:#d8b06b;
-  --ok:#3cc28c; --next:#f0b23a; --closed:#6d7d83; --sold:#a9b8bd; --hit:#ff6b52; --stage:#0a1215; color-scheme:dark}}
+  --ok:#3cc28c; --next:#f0b23a; --closed:#6d7d83;--pre:#b48ee0; --sold:#a9b8bd; --hit:#ff6b52; --stage:#0a1215; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0d1619; --panel:#142126; --ink:#e4ecee; --muted:#93a6ac; --line:#24363c;
   --sea:#3fb3bf; --sea-soft:#163a40; --sand:#d8b06b;
-  --ok:#3cc28c; --next:#f0b23a; --closed:#6d7d83; --sold:#a9b8bd; --hit:#ff6b52; --stage:#0a1215; color-scheme:dark}
+  --ok:#3cc28c; --next:#f0b23a; --closed:#6d7d83;--pre:#b48ee0; --sold:#a9b8bd; --hit:#ff6b52; --stage:#0a1215; color-scheme:dark}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
 *{box-sizing:border-box}
@@ -121,7 +121,7 @@ input[type=range]{width:100%;accent-color:var(--sea)}
 
 <div class="app">
   <header>
-    <div class="brand"><h1>CASPI YARDS</h1><span>симулятор продаж · 11 корпусов · 2 875 квартир</span></div>
+    <div class="brand"><h1>CASPI YARDS</h1><span>симулятор продаж · 11 корпусов · 2 538 квартир по HBT 22.10 + 265 предварительно</span></div>
     <div class="kpis" id="kpis"></div>
   </header>
 
@@ -155,7 +155,7 @@ input[type=range]{width:100%;accent-color:var(--sea)}
           <div class="field"><label for="f-b">Корпус</label><select id="f-b"><option value="">Все</option></select></div>
           <div class="field"><label for="f-view">Вид</label><select id="f-view"><option value="">Любой</option></select></div>
           <div class="field"><label for="f-fmin">Этаж от</label><input id="f-fmin" type="number" min="1" max="44" placeholder="3"></div>
-          <div class="field"><label for="f-st">Статус на дату</label><select id="f-st"><option value="open">Только в продаже</option><option value="">Все</option><option value="next">Следующая волна</option><option value="closed">Закрыто</option><option value="sold">Продано по плану</option></select></div>
+          <div class="field"><label for="f-st">Статус на дату</label><select id="f-st"><option value="open">Только в продаже</option><option value="">Все</option><option value="next">Следующая волна</option><option value="closed">Закрыто</option><option value="sold">Продано по плану</option><option value="pre">Предварительно (башня 3–23)</option></select></div>
           <div class="field" style="grid-column:1/-1"><label for="f-sort">Сортировка</label><select id="f-sort"><option value="tot">Цена, по возрастанию</option><option value="ppm">₼/м², по возрастанию</option><option value="-a">Площадь, по убыванию</option><option value="-f">Этаж, сверху</option></select></div>
         </div>
         <div class="count"><span>Найдено <b id="cnt">0</b></span><button class="btn" id="reset">Сбросить</button></div>
@@ -206,8 +206,8 @@ const $=s=>document.querySelector(s);
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt=n=>Math.round(n).toLocaleString('ru-RU').replace(/,/g,' ');
 const fmtM=n=>(n/1e6).toLocaleString('ru-RU',{maximumFractionDigits:1})+' млн';
-const BR=['Студия','1 спальня','2 спальни','3 спальни'];
-const BRs=['Ст','1С','2С','3С'];
+const BR=['Студия','1 спальня','2 спальни','3 спальни','4 спальни','5 спален'];
+const BRs=['Ст','1С','2С','3С','4С','5С'];
 
 // ---------- data ----------
 const [U0,PLANS,SITE,HBT]=await Promise.all(['units.json','plans.json','site.json','hbt.json'].map(f=>fetch(f).then(r=>r.json())));
@@ -221,11 +221,11 @@ for(const u of units){u.mi=mIdx(u.mon);u.wv=waveOrder[u.wave]||9;u.cur=u.a*u.ppm
   waveStart[u.wv]=Math.min(waveStart[u.wv]??999,u.mi)}
 const MAXM=Math.max(...units.map(u=>u.mi));$('#date').max=MAXM;
 let T=0;
-function status(u){if(u.mi<T)return'sold';if(waveStart[u.wv]<=T)return'open';const open=Object.keys(waveStart).filter(w=>waveStart[w]<=T).map(Number);const nx=Math.min(...Object.keys(waveStart).map(Number).filter(w=>waveStart[w]>T));return u.wv===nx?'next':'closed'}
+function status(u){if(u.src==='pre')return'pre';if(u.mi<T)return'sold';if(waveStart[u.wv]<=T)return'open';const open=Object.keys(waveStart).filter(w=>waveStart[w]<=T).map(Number);const nx=Math.min(...Object.keys(waveStart).map(Number).filter(w=>waveStart[w]>T));return u.wv===nx?'next':'closed'}
 // price on date: linear from current price (11.2026) to planned price at release month
 function ppmAt(u,t=T){if(u.mi<=0)return u.ppm2;const k=Math.min(1,Math.max(0,t/u.mi));return u.ppm+(u.ppm2-u.ppm)*k}
 const priceAt=(u,t=T)=>u.a*ppmAt(u,t);
-const ST={open:['В продаже','--ok'],next:['Следующая волна','--next'],closed:['Закрыто (резерв)','--closed'],sold:['Продано по плану','--sold']};
+const ST={open:['В продаже','--ok'],next:['Следующая волна','--next'],closed:['Закрыто (резерв)','--closed'],sold:['Продано по плану','--sold'],pre:['Предварительно, без брони','--pre']};
 
 // buildings
 const BNAME={11:'Башня Nargile'};const bName=b=>BNAME[b]||('Корпус '+b);
@@ -301,8 +301,8 @@ units.forEach((u,i)=>{const w=u.w||[0,0,-999];pos[i]=new THREE.Vector3(w[0],w[2]
 inst.setColorAt(0,new THREE.Color(1,1,1));scene.add(inst);
 const selRing=new THREE.Mesh(new THREE.SphereGeometry(4.2,20,14),new THREE.MeshBasicMaterial({color:0xe8503a,transparent:true,opacity:.85}));selRing.visible=false;scene.add(selRing);
 
-const HS={ok:['Совпадает с HBT','#3aa76d'],area:['Изменилась площадь','#e0a526'],count:['Изменилась нарезка','#e8503a'],gone:['Нет в HBT','#6b6f76']};
-const hbtOf=u=>(HBT.floors[u.b+'-'+u.f]||['gone'])[0];
+const HS={hbt:['Площадь по HBT','#3aa76d'],merged:['Объединена по HBT','#e8503a'],pre:['Предварительно (REV19)','#9a6fc4']};
+const hbtOf=u=>u.src==='pre'?'pre':u.from?'merged':'hbt';
 const MODES=['status','price','hbt'],MLBL={status:'статус',price:'цена ₼/м²',hbt:'сверка HBT'};
 let colorMode='status';let matchSet=null;let selected=null;
 const col=new THREE.Color();
@@ -389,7 +389,7 @@ function renderCard(){if(selected==null)return;const u=units[selected],s=status(
   <span class="badge" style="color:var(${ST[s][1]})">${ST[s][0]}</span>
   <div class="price"><b>${fmt(priceAt(u))} ₼</b><span>${fmt(ppmAt(u))} ₼/м² на ${mLabel(T)}</span></div>
   <dl class="dl">
-    <dt>Площадь</dt><dd>${u.a} м²${u.bal?` · балкон ${u.bal} м²`:''}</dd>
+    <dt>Площадь</dt><dd>${u.a} м²${u.src==='pre'?' · <b>нарезка не утверждена, бронь не принимается</b>':u.from?` · объединена из ${u.from.join(', ')}`:''}${u.bal?` · балкон ${u.bal} м²`:''}</dd>
     <dt>Волна выпуска</dt><dd>${u.wave} · плановая продажа ${u.mon}</dd>
     <dt>Цена в месяц продажи</dt><dd>${fmt(u.fin)} ₼ (${fmt(u.ppm2)} ₼/м²)</dd>
     <dt>Потенциал роста</dt><dd>${growth>0?'+':''}${growth.toFixed(1)}% до месяца продажи</dd>
@@ -411,9 +411,9 @@ function planSvg(u){
   <div class="note">Нажмите на соседнюю квартиру на плане. Площадь на чертеже: ${P.pos[u.pi].area} м² общая, ${P.pos[u.pi].net} м² внутренняя.</div>`}
 
 // ---------- timeline + KPIs ----------
-const byMonth=new Array(MAXM+1).fill(0);for(const u of units)if(u.mi>=0)byMonth[u.mi]+=u.fin;
+const byMonth=new Array(MAXM+1).fill(0);for(const u of units)if(u.mi>=0&&u.src!=='pre')byMonth[u.mi]+=u.fin;
 function kpis(){let sold=0,soldN=0,open=0,openV=0;for(const u of units){const s=status(u);if(s==='sold'){sold+=u.fin;soldN++}else if(s==='open'){open++;openV+=priceAt(u)}}
-  const tot=units.reduce((a,u)=>a+u.fin,0);const win=byMonth.slice(Math.max(0,T-5),T+1);const pace=units.filter(u=>u.mi>=T-5&&u.mi<=T).length/win.length;
+  const tot=units.reduce((a,u)=>a+(u.src==='pre'?0:u.fin),0);const win=byMonth.slice(Math.max(0,T-5),T+1);const pace=units.filter(u=>u.src!=='pre'&&u.mi>=T-5&&u.mi<=T).length/win.length;
   $('#kpis').innerHTML=[[fmtM(sold)+' ₼','Cash-in по плану'],[(sold/tot*100).toFixed(0)+'%','Выручки собрано'],[fmt(soldN),'Продано, кв.'],[fmt(open),'В экспозиции'],[pace.toFixed(0)+'/мес','Темп, 6 мес'],[fmtM(openV)+' ₼','Стоимость экспозиции']]
    .map(([v,l])=>`<div class="kpi"><b>${v}</b><small>${l}</small></div>`).join('')}
 function spark(){const c=$('#spark'),r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio,2);c.width=r.width*d;c.height=r.height*d;const x=c.getContext('2d');x.scale(d,d);
