@@ -121,7 +121,7 @@ input[type=range]{width:100%;accent-color:var(--sea)}
 
 <div class="app">
   <header>
-    <div class="brand"><h1>CASPI YARDS</h1><span>симулятор продаж · 11 корпусов · 2 538 квартир по HBT 22.10 + 265 предварительно</span></div>
+    <div class="brand"><h1>CASPI YARDS</h1><span>симулятор продаж · единый реестр 26.10 · 2 925 квартир (315 в башне 3–23 — предварительно)</span></div>
     <div class="kpis" id="kpis"></div>
   </header>
 
@@ -301,9 +301,9 @@ units.forEach((u,i)=>{const w=u.w||[0,0,-999];pos[i]=new THREE.Vector3(w[0],w[2]
 inst.setColorAt(0,new THREE.Color(1,1,1));scene.add(inst);
 const selRing=new THREE.Mesh(new THREE.SphereGeometry(4.2,20,14),new THREE.MeshBasicMaterial({color:0xe8503a,transparent:true,opacity:.85}));selRing.visible=false;scene.add(selRing);
 
-const HS={hbt:['Площадь по HBT','#3aa76d'],merged:['Объединена по HBT','#e8503a'],pre:['Предварительно (REV19)','#9a6fc4']};
-const hbtOf=u=>u.src==='pre'?'pre':u.from?'merged':'hbt';
-const MODES=['status','price','hbt'],MLBL={status:'статус',price:'цена ₼/м²',hbt:'сверка HBT'};
+const HS={upd:['Площадь обновлена','#3aa76d'],old:['Старый прайс, сверить с планами','#e0a526'],tmp:['Башня 3–23: временная симуляция','#9a6fc4']};
+const hbtOf=u=>u.q||'old';
+const MODES=['status','price','hbt'],MLBL={status:'статус',price:'цена ₼/м²',hbt:'проверка реестра'};
 let colorMode='status';let matchSet=null;let selected=null;
 const col=new THREE.Color();
 function priceColor(v,lo,hi){const k=Math.max(0,Math.min(1,(v-lo)/(hi-lo)));return col.setHSL(.52-.5*k,.65,.48)}
@@ -318,7 +318,7 @@ function recolor(){
     dummy.position.copy(pos[i]);dummy.scale.setScalar(hit&&matchSet?1.25:hit?1:.6);dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix)});
   inst.instanceColor.needsUpdate=true;inst.instanceMatrix.needsUpdate=true;legend()}
 function legend(){
-  if(colorMode==='hbt'){$('#legend').innerHTML=Object.entries(HS).map(([k,[l,c]])=>`<span class="chip"><span class="dot" style="background:${c}"></span>${l} · ${units.filter(u=>hbtOf(u)===k).length}</span>`).join('')+`<span class="chip">HBT ${HBT.date}</span>`;return}
+  if(colorMode==='hbt'){$('#legend').innerHTML=Object.entries(HS).map(([k,[l,c]])=>`<span class="chip"><span class="dot" style="background:${c}"></span>${l} · ${units.filter(u=>hbtOf(u)===k).length}</span>`).join('')+`<span class="chip">реестр 26.10.2026 · все строки неподтверждённые</span>`;return}
   if(colorMode==='status')$('#legend').innerHTML=Object.entries(ST).map(([k,[l,c]])=>`<span class="chip"><span class="dot" style="background:var(${c})"></span>${l} · ${units.filter(u=>status(u)===k).length}</span>`).join('');
   else $('#legend').innerHTML=`<span class="chip"><span class="dot" style="background:hsl(187,65%,48%)"></span>${fmt(ppmLo)} ₼/м²</span><span class="chip"><span class="dot" style="background:hsl(7,65%,48%)"></span>${fmt(ppmHi)} ₼/м²</span><span class="chip">цена на ${mLabel(T)}</span>`}
 
@@ -389,7 +389,7 @@ function renderCard(){if(selected==null)return;const u=units[selected],s=status(
   <span class="badge" style="color:var(${ST[s][1]})">${ST[s][0]}</span>
   <div class="price"><b>${fmt(priceAt(u))} ₼</b><span>${fmt(ppmAt(u))} ₼/м² на ${mLabel(T)}</span></div>
   <dl class="dl">
-    <dt>Площадь</dt><dd>${u.a} м²${u.src==='pre'?' · <b>нарезка не утверждена, бронь не принимается</b>':u.from?` · объединена из ${u.from.join(', ')}`:''}${u.bal?` · балкон ${u.bal} м²`:''}</dd>
+    <dt>Площадь</dt><dd>${u.a} м²${u.src==='pre'?' · <b>нарезка не утверждена, бронь не принимается</b>':u.q==='old'?' · площадь из старого прайса, сверить с планами':''}${u.bal?` · балкон ${u.bal} м²`:''}</dd>
     <dt>Волна выпуска</dt><dd>${u.wave} · плановая продажа ${u.mon}</dd>
     <dt>Цена в месяц продажи</dt><dd>${fmt(u.fin)} ₼ (${fmt(u.ppm2)} ₼/м²)</dd>
     <dt>Потенциал роста</dt><dd>${growth>0?'+':''}${growth.toFixed(1)}% до месяца продажи</dd>
